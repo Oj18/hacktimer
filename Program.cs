@@ -21,8 +21,6 @@ namespace hacktimer
                 bestTime = File.ReadAllText("best_time.txt");
             }
 
-            File.WriteAllText("categories.json", JsonConvert.SerializeObject(categories));
-
             categories = JsonConvert.DeserializeObject<List<KeyValuePair<string, string[]>>>(File.ReadAllText("categories.json"));
 
             Menu();
