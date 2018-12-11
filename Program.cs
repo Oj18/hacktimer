@@ -3,6 +3,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace hacktimer
 {
@@ -12,13 +13,23 @@ namespace hacktimer
 
         public static string time;
 
+        public static string bestTime = null;
+
         static void Main(string[] args)
         {
+            if (File.Exists("best_time.txt")) {
+                bestTime = File.ReadAllText("best_time.txt");
+            }
+
+            File.WriteAllText("categories.json", JsonConvert.SerializeObject(categories));
+
+            categories = JsonConvert.DeserializeObject<List<KeyValuePair<string, string[]>>>(File.ReadAllText("categories.json"));
+
             Menu();
 
             DrawMain();
-
             PythonScript("anykey_detection.py");
+
 
             startTime = DateTime.Now;
 
@@ -26,12 +37,16 @@ namespace hacktimer
             timerThread.Start();
 
             while (true) {
-                PythonScript("enter_detection.py");
+                string output = PythonScript("enter_detection.py");
 
-                on++;
-                DrawMain();
+                if (output == "stop") {
+                    break;
+                } else {
+                    on++;
+                    DrawMain();
 
-                if (on == categories[selected].Value.Length) { break; }
+                    if (on == categories[selected].Value.Length) { on--; }
+                }
             }
 
             DrawMain();
@@ -41,8 +56,9 @@ namespace hacktimer
             Environment.Exit(0);
         }
 
+        public static string version = "hacktimer v0.7 - hackmud speedrun timer - by oliver1803";
 
-        private static void PythonScript(string script)
+        private static string PythonScript(string script)
         {
             ProcessStartInfo start = new ProcessStartInfo();
             start.FileName = "python3";
@@ -55,19 +71,90 @@ namespace hacktimer
                 using (StreamReader reader = process.StandardOutput)
                 {
                     string result = reader.ReadToEnd();
+
+                    return result;
                 }
             }
+        }
+
+        public static string oldTime = null;
+
+        public static List<KeyValuePair<int, int>> showChange = new List<KeyValuePair<int, int>>();
+
+        public static bool highlightChange(int index) {
+            if (showChange.Count == 0) return false;
+
+            int i = 0;
+            foreach (KeyValuePair<int, int> pair in showChange.ToArray()) {
+                if (pair.Key == index) {
+                    if (pair.Value > 0) {
+                        showChange[i] = new KeyValuePair<int, int>(index, pair.Value - 1);
+                        return true;
+                    }
+                    else { return false; }
+                }
+
+                i++;
+            }
+
+            return false;
+        }
+
+        // Returns true if added new element
+        // Returns false if added time to existing element
+        public static bool addChange(int index) {
+            int change = (int)Math.Pow(13 - index, 2.2);
+            if (change < 0) change = 0;
+
+            int i = 0;
+            foreach (KeyValuePair<int, int> pair in showChange.ToArray()) {
+                if (pair.Key == index) {
+                    showChange[i] = new KeyValuePair<int, int>(index, pair.Value + change);
+                    
+                    return false;
+                }
+
+                i++;
+            }
+
+            showChange.Add(new KeyValuePair<int, int>(index, change));
+
+            return true;
         }
 
         public static void Timer() {
             while (true) {
                 TimeSpan change = DateTime.Now - startTime;
 
-                string output = change.ToString(@"hh\:mm\:ss") + ":" + change.Milliseconds;
-                time = output;
+                string milliseconds = change.Milliseconds.ToString();
 
+                milliseconds = new string('0', 3 - milliseconds.Length) + milliseconds;
+
+                time = change.ToString(@"hh\:mm\:ss") + ":" + milliseconds;
+
+                if (time.Length != 12) Console.WriteLine("AH");
+
+                if (oldTime == null || oldTime.Length != time.Length) oldTime = time;
+
+                Console.BackgroundColor = ConsoleColor.Black;
                 Console.SetCursorPosition(0, Console.WindowHeight - 3);
-                Console.Write(output);
+
+                for (int i = 0; i < time.Length; i++) {
+                    if (time[i] != oldTime[i]) { addChange(i); }
+
+                    if (highlightChange(i)) { Console.BackgroundColor = ConsoleColor.DarkGray; }
+                    else { Console.BackgroundColor = ConsoleColor.Black; }
+
+                    Console.Write(time[i]);
+                }
+
+                Console.BackgroundColor = ConsoleColor.Black;
+
+                Console.WriteLine("\n" + oldTime);
+
+                Console.BackgroundColor = ConsoleColor.Black;
+
+                oldTime = time;
 
                 Thread.Sleep(10);
             }
@@ -77,7 +164,7 @@ namespace hacktimer
             Console.BackgroundColor = ConsoleColor.Black;
 
             Console.Clear();
-            Console.WriteLine("hackmud " + categories[selected].Key);
+            Console.WriteLine("hackmud " + categories[selected].Key + "\n" + version);
             Console.WriteLine(new string('-', Console.BufferWidth));
 
             Console.WriteLine();
@@ -112,7 +199,7 @@ namespace hacktimer
             Console.BackgroundColor = ConsoleColor.Black;
 
             Console.Clear();
-            Console.WriteLine("hacktimer - hackmud speedrun timer - by oliver1803");
+            Console.WriteLine("categories\nhacktimer - hackmud speedrun timer - by oliver1803");
             Console.WriteLine(new string('-', Console.BufferWidth) + "\n");
 
             int index = 0;
@@ -142,7 +229,7 @@ namespace hacktimer
                 }
 
                 if (key == ConsoleKey.DownArrow) {
-                    if (selected < categories.Count) selected++;
+                    if (selected < categories.Count - 1) selected++;
                     DrawMenu();
                 }
 
