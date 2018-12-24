@@ -3,7 +3,8 @@ import time
 import _thread
 
 def on_press(key):
-    raise SystemExit
+        if (key != keyboard.Key.alt and key != keyboard.Key.tab):
+                raise SystemExit
 
 
 def startListener():

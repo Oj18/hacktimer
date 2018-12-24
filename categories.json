@@ -1,1 +1,6 @@
-[{"Key":"T1 Corp Scriptless%","Value":["Get corp","Get places","Get usage","Get password / strategy","Get blog","Try p key","Try pass key","Try password key"]},{"Key":"T2 Corp Scriptless%","Value":["Get T2 corp","Get T1 corp places","Get T1 corp usage","Get blog","Try username"]}]
+[
+    {"Key":"T1 Corp Scriptless%","Value":["Get corp - /r","Get places - /m","Get usage - /u","Get password / strategy - /n <navigation method> <strategy bit>","Get blog - /n <navigation method> <blog bit>","Try password key","Try pass key","Try p key"]},
+    {"Key":"T1 Corp Scriptless% FAST","Value":["Get corp - /r","Get usage and people place - /u <place>","Try password key - /p <place> <nav method> <place> password","Try pass key - /p <place> <nav method> <place> pass","Try p key - /p <place> <nav method> <place> p"]},
+    {"Key":"T1 Corp Scriptless% FASTEST","Value":["Get corp - /r","Force values - /f <place>"]},
+    {"Key":"T2 Corp Scriptless%","Value":["Get T2 corp","Get T1 corp places","Get T1 corp usage","Get blog","Try username"]}
+]

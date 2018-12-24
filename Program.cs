@@ -13,48 +13,68 @@ namespace hacktimer
 
         public static string time;
 
-        public static string bestTime = null;
-
+        public static int runNumber;
+        
         static void Main(string[] args)
         {
-            if (File.Exists("best_time.txt")) {
-                bestTime = File.ReadAllText("best_time.txt");
-            }
-
             categories = JsonConvert.DeserializeObject<List<KeyValuePair<string, string[]>>>(File.ReadAllText("categories.json"));
 
-            Menu();
-
-            DrawMain();
-            PythonScript("anykey_detection.py");
-
-
-            startTime = DateTime.Now;
-
-            Thread timerThread = new Thread(() => Timer());
-            timerThread.Start();
-
             while (true) {
-                string output = PythonScript("enter_detection.py");
+                Menu();
 
-                if (output == "stop") {
+                if (selected == categories.Count) {
                     break;
-                } else {
-                    on++;
-                    DrawMain();
-
-                    if (on == categories[selected].Value.Length) { on--; }
                 }
+
+                // get run number
+                if (File.Exists(categories[selected].Key + "-runnumber.txt"))
+                    runNumber = int.Parse(File.ReadAllText(categories[selected].Key + "-runnumber.txt"));
+                else
+                    runNumber = 0;
+
+                DrawMain();
+                PythonScript("anykey_detection.py");
+
+                startTime = DateTime.Now;
+
+                Thread timerThread = new Thread(() => Timer());
+                timerThread.Start();
+
+                while (true) {
+                    string output = PythonScript("enter_detection.py");
+
+                    if (output == "stop") {
+                        break;
+                    } else {
+                        on++;
+                        DrawMain();
+
+                        if (on == categories[selected].Value.Length) { on--; }
+                    }
+                }
+
+                cancelTimer = true;
+
+                while (cancelTimer) { Thread.Sleep(1); }
+                
+                runNumber++;
+
+                File.WriteAllText(categories[selected].Key + "-runnumber.txt", runNumber.ToString());
+
+                DrawMain();
+
+                on = 0;
+
+                Console.SetCursorPosition(0, Console.WindowHeight - 3);
+                Console.WriteLine(time);
+
+                Console.ReadLine();
             }
-
-            DrawMain();
-
-            Console.WriteLine("\n" + time);
-
-            Environment.Exit(0);
         }
 
-        public static string version = "hacktimer v0.7 - hackmud speedrun timer - by oliver1803";
+        public static bool cancelTimer = false;
+
+        public static string version = "hacktimer v1.1.2 - hackmud speedrun timer - by oj / oliver1803";
 
         private static string PythonScript(string script)
         {
@@ -130,8 +150,6 @@ namespace hacktimer
 
                 time = change.ToString(@"hh\:mm\:ss") + ":" + milliseconds;
 
-                if (time.Length != 12) Console.WriteLine("AH");
-
                 if (oldTime == null || oldTime.Length != time.Length) oldTime = time;
 
                 Console.BackgroundColor = ConsoleColor.Black;
@@ -148,14 +166,16 @@ namespace hacktimer
 
                 Console.BackgroundColor = ConsoleColor.Black;
 
-                Console.WriteLine("\n" + oldTime);
-
-                Console.BackgroundColor = ConsoleColor.Black;
-
                 oldTime = time;
+
+                if (cancelTimer) {
+                    break;
+                }
 
                 Thread.Sleep(10);
             }
+
+            cancelTimer = false;
         }
 
         public static void DrawMain() {
@@ -181,6 +201,10 @@ namespace hacktimer
 
             Console.WriteLine();
 
+            Console.WriteLine(new string('-', Console.BufferWidth) + "\n");
+
+            Console.WriteLine("run: " + runNumber.ToString() + "\n");
+
             Console.WriteLine(new string('-', Console.BufferWidth));
         }
 
@@ -188,20 +212,21 @@ namespace hacktimer
 
         public static int on = 0;
 
-        public static List<KeyValuePair<string, string[]>> categories = new List<KeyValuePair<string, string[]>>() {
-            new KeyValuePair<string, string[]>("T1 Corp Scriptless%", new string[] { "Get corp", "Get places", "Get usage", "Get password / strategy", "Get blog", "Try p key", "Try pass key", "Try password key" }),
-            new KeyValuePair<string, string[]>("T2 Corp Scriptless%", new string[] { "Get T2 corp", "Get T1 corp places", "Get T1 corp usage", "Get blog", "Try username" })
-        };
+        public static List<KeyValuePair<string, string[]>> categories;
 
         static void DrawMenu() {
             Console.BackgroundColor = ConsoleColor.Black;
 
             Console.Clear();
-            Console.WriteLine("categories\nhacktimer - hackmud speedrun timer - by oliver1803");
+            Console.WriteLine("categories\n" + version);
             Console.WriteLine(new string('-', Console.BufferWidth) + "\n");
 
+            //duplicate the array of categories
+            List<KeyValuePair<string, string[]>> addedCategories = new List<KeyValuePair<string, string[]>>(categories);
+            addedCategories.Add(new KeyValuePair<string, string[]>("Exit", new string[] { "exit" }));
+
             int index = 0;
-            foreach (KeyValuePair<string, string[]> category in categories) {
+            foreach (KeyValuePair<string, string[]> category in addedCategories) {
                 if (index == selected) { Console.BackgroundColor = ConsoleColor.DarkGray; }
                 else { Console.BackgroundColor = ConsoleColor.Black; }
 
@@ -227,7 +252,7 @@ namespace hacktimer
                 }
 
                 if (key == ConsoleKey.DownArrow) {
-                    if (selected < categories.Count - 1) selected++;
+                    if (selected < categories.Count) selected++;
                     DrawMenu();
                 }
 
